@@ -139,3 +139,46 @@ def updatelowstock():
         except Exception as log_error:
             print(f"Failed to write error log: {log_error}")
             print(error_message)
+
+
+def update_low_stock():
+    """
+    Executes the UpdateLowStockProducts mutation via GraphQL endpoint and logs updates.
+    """
+    import requests
+    from django.conf import settings
+    import json
+    from datetime import datetime
+
+    # GraphQL endpoint (adjust if needed)
+    endpoint = getattr(settings, 'GRAPHQL_ENDPOINT', 'http://localhost:8000/graphql/')
+    mutation = '''
+    mutation {
+      updateLowStockProducts {
+        updatedProducts {
+          name
+          stock
+        }
+        message
+      }
+    }
+    '''
+    headers = {'Content-Type': 'application/json'}
+    response = requests.post(endpoint, json={'query': mutation}, headers=headers)
+    log_path = '/tmp/low_stock_updates_log.txt'
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    if response.status_code == 200:
+        data = response.json()
+        try:
+            products = data['data']['updateLowStockProducts']['updatedProducts']
+            message = data['data']['updateLowStockProducts']['message']
+            with open(log_path, 'a') as f:
+                f.write(f"[{timestamp}] {message}\n")
+                for prod in products:
+                    f.write(f"[{timestamp}] {prod['name']} restocked to {prod['stock']}\n")
+        except Exception as e:
+            with open(log_path, 'a') as f:
+                f.write(f"[{timestamp}] Error parsing response: {e}\n")
+    else:
+        with open(log_path, 'a') as f:
+            f.write(f"[{timestamp}] Request failed: {response.status_code} {response.text}\n")
