@@ -12,7 +12,7 @@ django.setup()
 
 
 @shared_task
-def generatecrmreport():
+def generate_crm_report():
     """
     Generate a weekly CRM report using GraphQL queries.
     Fetches total customers, orders, and revenue, then logs to file.
@@ -27,40 +27,40 @@ def generatecrmreport():
         client = Client(transport=transport, fetch_schema_from_transport=True)
         
         # Query for CRM statistics
-        query = gql("""
-            query GetCRMStats {
-                customers {
-                    id
+        query = gql('''
+            query {
+                allCustomers {
+                    edges { node { id } }
                 }
-                orders {
-                    id
-                    totalAmount
+                allOrders {
+                    edges { node { id totalAmount } }
                 }
             }
-        """)
+        ''')
         
         result = client.execute(query)
         
-        # Calculate statistics
-        customers = result.get('customers', [])
-        orders = result.get('orders', [])
+        # Extract customer and order data
+        customers = result['allCustomers']['edges']
+        orders = result['allOrders']['edges']
         
+        # Calculate statistics
         total_customers = len(customers)
         total_orders = len(orders)
-        total_revenue = sum(float(order.get('totalAmount', 0)) for order in orders)
+        total_revenue = sum(float(order['node']['totalAmount']) for order in orders)
         
         # Get current timestamp
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
-        # Create report message
-        report_message = f"{timestamp} - Report: {total_customers} customers, {total_orders} orders, {total_revenue:.2f} revenue."
+        # Log file path
+        log_path = '/tmp/crm_report_log.txt'
         
-        # Log the report
-        with open('/tmp/crmreportlog.txt', 'a') as log_file:
-            log_file.write(report_message + '\n')
+        # Write report to log file
+        with open(log_path, 'a') as f:
+            f.write(f"{timestamp} - Report: {total_customers} customers, {total_orders} orders, {total_revenue:.2f} revenue\n")
         
-        print(f"CRM Report generated: {report_message}")
-        return report_message
+        print(f"CRM Report generated: {timestamp} - Report: {total_customers} customers, {total_orders} orders, {total_revenue:.2f} revenue")
+        return f"{timestamp} - Report: {total_customers} customers, {total_orders} orders, {total_revenue:.2f} revenue"
         
     except Exception as e:
         # Log errors
