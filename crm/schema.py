@@ -10,6 +10,8 @@ from graphene_django.filter import DjangoFilterConnectionField
 from graphql import GraphQLError
 from .filters import CustomerFilter, ProductFilter, OrderFilter
 from .models import Customer, Product, Order
+from crm.models import Product  # Explicit import for Product
+
 
 # ==============================
 # GraphQL Types

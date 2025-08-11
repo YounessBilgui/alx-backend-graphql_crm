@@ -79,7 +79,7 @@ def updatelowstock():
     '''
     headers = {'Content-Type': 'application/json'}
     response = requests.post(endpoint, json={'query': mutation}, headers=headers)
-    log_path = '/tmp/lowstockupdates_log.txt'
+    log_path = '/tmp/low_stock_updates_log.txt'
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     if response.status_code == 200:
         data = response.json()
