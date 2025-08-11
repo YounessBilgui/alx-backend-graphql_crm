@@ -13,7 +13,7 @@ django.setup()
 
 
 @shared_task
-def generatecrmreport():
+def generate_crm_report():
     """
     Generate a weekly CRM report using GraphQL queries.
     Fetches total customers, orders, and revenue, then logs to file.
@@ -32,7 +32,7 @@ def generatecrmreport():
     headers = {'Content-Type': 'application/json'}
     response = requests.post(endpoint, json={'query': query}, headers=headers)
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    log_path = '/tmp/crmreportlog.txt'
+    log_path = '/tmp/crm_report_log.txt'
     if response.status_code == 200:
         data = response.json()
         customers = data['data']['allCustomers']['edges']
