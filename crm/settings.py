@@ -136,7 +136,7 @@ GRAPHENE = {
 
 # Django-crontab Configuration
 CRONJOBS = [
-    ('0 */12 * * *', 'crm.cron.update_low_stock'),
+    ('0 */12 * * *', 'crm.cron.updatelowstock'),
 ]
 
 # Celery Configuration
