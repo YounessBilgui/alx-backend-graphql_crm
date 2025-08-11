@@ -5,6 +5,7 @@ import os
 import django
 from datetime import datetime
 from celery import shared_task
+import requests
 
 # Setup Django environment
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'graphql_crm.settings')
@@ -12,69 +13,38 @@ django.setup()
 
 
 @shared_task
-def generate_crm_report():
+def generatecrmreport():
     """
     Generate a weekly CRM report using GraphQL queries.
     Fetches total customers, orders, and revenue, then logs to file.
     """
-    try:
-        # Import GraphQL client
-        from gql import gql, Client
-        from gql.transport.requests import RequestsHTTPTransport
-        
-        # Setup GraphQL client
-        transport = RequestsHTTPTransport(url="http://localhost:8000/graphql")
-        client = Client(transport=transport, fetch_schema_from_transport=True)
-        
-        # Query for CRM statistics
-        query = gql('''
-            query {
-                allCustomers {
-                    edges { node { id } }
-                }
-                allOrders {
-                    edges { node { id totalAmount } }
-                }
-            }
-        ''')
-        
-        result = client.execute(query)
-        
-        # Extract customer and order data
-        customers = result['allCustomers']['edges']
-        orders = result['allOrders']['edges']
-        
-        # Calculate statistics
+    endpoint = 'http://localhost:8000/graphql/'
+    query = '''
+    query {
+        allCustomers {
+            edges { node { id } }
+        }
+        allOrders {
+            edges { node { id totalAmount } }
+        }
+    }
+    '''
+    headers = {'Content-Type': 'application/json'}
+    response = requests.post(endpoint, json={'query': query}, headers=headers)
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    log_path = '/tmp/crmreportlog.txt'
+    if response.status_code == 200:
+        data = response.json()
+        customers = data['data']['allCustomers']['edges']
+        orders = data['data']['allOrders']['edges']
         total_customers = len(customers)
         total_orders = len(orders)
         total_revenue = sum(float(order['node']['totalAmount']) for order in orders)
-        
-        # Get current timestamp
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
-        # Log file path
-        log_path = '/tmp/crm_report_log.txt'
-        
-        # Write report to log file
         with open(log_path, 'a') as f:
             f.write(f"{timestamp} - Report: {total_customers} customers, {total_orders} orders, {total_revenue:.2f} revenue\n")
-        
-        print(f"CRM Report generated: {timestamp} - Report: {total_customers} customers, {total_orders} orders, {total_revenue:.2f} revenue")
-        return f"{timestamp} - Report: {total_customers} customers, {total_orders} orders, {total_revenue:.2f} revenue"
-        
-    except Exception as e:
-        # Log errors
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        error_message = f"{timestamp} - ERROR generating CRM report: {str(e)}"
-        
-        try:
-            with open('/tmp/crmreportlog.txt', 'a') as log_file:
-                log_file.write(error_message + '\n')
-        except Exception as log_error:
-            print(f"Failed to write error log: {log_error}")
-        
-        print(error_message)
-        return error_message
+    else:
+        with open(log_path, 'a') as f:
+            f.write(f"{timestamp} - Error: {response.status_code} {response.text}\n")
 
 
 @shared_task
